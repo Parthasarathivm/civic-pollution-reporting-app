@@ -1,18 +1,27 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Navbar";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
 export const metadata: Metadata = {
-  title: "CleanAir & Clear Streets",
+  title: "CivicPulse — Environmental Civic Intelligence",
   description:
-    "Report. Predict. Resolve. Verify. — A civic-tech pollution reporting platform with AI-powered hotspot detection and worker routing.",
+    "Report. Track. Improve. — A citizen-powered environmental pollution reporting and response platform.",
   keywords: [
-    "pollution",
+    "CivicPulse",
+    "pollution reporting",
     "civic tech",
-    "clean city",
-    "garbage reporting",
-    "municipal",
+    "environmental monitoring",
+    "air quality",
+    "waste management",
+    "municipal response",
   ],
 };
 
@@ -22,14 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-theme="cleanairday">
+    <html lang="en" data-theme="cleanairday" className={inter.variable} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -45,10 +48,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning className="font-sans antialiased">
         <Providers>
           <Navbar />
-          <main style={{ minHeight: "calc(100vh - 64px)" }}>{children}</main>
+          <main style={{ minHeight: "calc(100vh - 64px)", position: "relative", zIndex: 1 }}>
+            {children}
+          </main>
         </Providers>
       </body>
     </html>

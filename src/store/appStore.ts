@@ -3,17 +3,20 @@ import { create } from "zustand";
 
 export type Theme =
   | "cleanairday"
-  | "nightpatrol"
-  | "alertmode"
   | "ecogreen"
-  | "highvisibility";
+  | "nightpatrol"
+  | "highvisibility"
+  | "livingplanet"
+  | "alertmode";
 export type Language = "en" | "hi" | "ta";
+
+export type UserRole = "citizen" | "moderator" | "authority" | "worker" | "admin";
 
 export interface User {
   id: number;
   name: string;
   email: string;
-  role: "citizen" | "worker" | "admin";
+  role: UserRole;
   preferredLanguage: string;
 }
 
@@ -23,11 +26,13 @@ interface AppState {
   user: User | null;
   token: string | null;
   unreadCount: number;
+  activePlanId: string;
   setTheme: (theme: Theme) => void;
   setLanguage: (lang: Language) => void;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   setUnreadCount: (count: number) => void;
+  setActivePlan: (id: string) => void;
   logout: () => void;
 }
 
@@ -37,6 +42,7 @@ export const useAppStore = create<AppState>((set) => ({
   user: null,
   token: null,
   unreadCount: 0,
+  activePlanId: "starter",
 
   setTheme: (theme) => {
     if (typeof window !== "undefined") {
@@ -64,6 +70,13 @@ export const useAppStore = create<AppState>((set) => ({
   },
 
   setUnreadCount: (unreadCount) => set({ unreadCount }),
+
+  setActivePlan: (activePlanId) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("civic_plan", activePlanId);
+    }
+    set({ activePlanId });
+  },
 
   logout: () => {
     if (typeof window !== "undefined") {

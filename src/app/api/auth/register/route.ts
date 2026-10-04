@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { db } from "@/db";
+import { db, triggerDbPersistence } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { signToken } from "@/lib/auth";
+import { signToken, getTokenFromRequest, isAdminRole } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, phone, role = "citizen" } = body;
+    const { name, email, password, phone, role } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -17,11 +17,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
+    }
+
     // Check if email already exists
     const existing = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, email.toLowerCase().trim()))
       .limit(1);
 
     if (existing.length > 0) {
@@ -31,22 +38,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const allowedRoles = ["citizen", "worker", "admin"];
-    const userRole = allowedRoles.includes(role) ? role : "citizen";
+    // Server-side authorization check: only existing admins can create privileged accounts (admin/moderator/authority)
+    let assignedRole = "citizen";
+    if (role && ["admin", "moderator", "authority", "worker"].includes(role)) {
+      const requester = getTokenFromRequest(req);
+      if (requester && isAdminRole(requester.role)) {
+        assignedRole = role === "worker" ? "authority" : role;
+      } else {
+        // If regular user requests elevated role, safely default to citizen
+        assignedRole = "citizen";
+      }
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const [newUser] = await db
       .insert(users)
       .values({
-        name,
-        email,
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
         passwordHash,
-        phone: phone || null,
-        role: userRole,
+        phone: phone?.trim() || null,
+        role: assignedRole,
         preferredLanguage: "en",
       })
       .returning();
+
+    triggerDbPersistence();
 
     const token = signToken({
       userId: newUser.id,
@@ -68,7 +86,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
-      { error: "Registration failed" },
+      { error: "Registration failed. Please check inputs and try again." },
       { status: 500 }
     );
   }

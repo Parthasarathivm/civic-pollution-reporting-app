@@ -12,7 +12,18 @@ export async function GET(req: NextRequest) {
     }
 
     const userNotifs = await db
-      .select()
+      .select({
+        id: notifications.id,
+        userId: notifications.userId,
+        reportId: notifications.reportId,
+        title: notifications.title,
+        messageKey: notifications.messageKey,
+        messageParams: notifications.messageParams,
+        link: notifications.link,
+        type: notifications.type,
+        read: notifications.read,
+        createdAt: notifications.createdAt,
+      })
       .from(notifications)
       .where(eq(notifications.userId, payload.userId))
       .orderBy(desc(notifications.createdAt))
@@ -35,16 +46,32 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Mark all as read
-    await db
-      .update(notifications)
-      .set({ read: true })
-      .where(
-        and(
-          eq(notifications.userId, payload.userId),
-          eq(notifications.read, false)
-        )
-      );
+    const body = await req.json().catch(() => ({}));
+    const { notificationId } = body;
+
+    if (notificationId) {
+      // Mark specific notification as read
+      await db
+        .update(notifications)
+        .set({ read: true })
+        .where(
+          and(
+            eq(notifications.id, parseInt(notificationId)),
+            eq(notifications.userId, payload.userId)
+          )
+        );
+    } else {
+      // Mark all as read
+      await db
+        .update(notifications)
+        .set({ read: true })
+        .where(
+          and(
+            eq(notifications.userId, payload.userId),
+            eq(notifications.read, false)
+          )
+        );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

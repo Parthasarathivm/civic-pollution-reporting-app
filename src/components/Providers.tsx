@@ -5,6 +5,9 @@ import i18n from "@/lib/i18n";
 import { useAppStore } from "@/store/appStore";
 import type { Theme, Language } from "@/store/appStore";
 
+import { EnvironmentalBackground } from "@/components/EnvironmentalBackground";
+import { CivicPulseAssistant } from "@/components/CivicPulseAssistant";
+
 async function loadTranslations(lang: string) {
   try {
     const res = await fetch(`/locales/${lang}/translation.json`);
@@ -19,7 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const { setTheme, setLanguage, setUser, setToken } = useAppStore();
 
   useEffect(() => {
-    // Initialize from localStorage
+    // Initialize from localStorage safely on client mount
     const savedTheme = (localStorage.getItem("theme") as Theme) || "cleanairday";
     const savedLang = (localStorage.getItem("language") as Language) || "en";
     const savedToken = localStorage.getItem("token");
@@ -30,7 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     setTheme(savedTheme);
 
-    // Load all translations upfront
+    // Load translations
     Promise.all([
       loadTranslations("en"),
       loadTranslations("hi"),
@@ -43,7 +46,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Restore auth
     if (savedToken) {
       setToken(savedToken);
-      // Verify token
       fetch("/api/auth/me", {
         headers: { Authorization: `Bearer ${savedToken}` },
       })
@@ -53,7 +55,25 @@ export function Providers({ children }: { children: React.ReactNode }) {
         })
         .catch(() => {});
     }
+
+    if (typeof window !== "undefined") {
+      (window as any).__civicSetTheme = (newTheme: Theme) => {
+        setTheme(newTheme);
+      };
+    }
+
+    const onThemeEvent = (e: any) => {
+      if (e.detail) setTheme(e.detail);
+    };
+    window.addEventListener("civic-set-theme", onThemeEvent);
+    return () => window.removeEventListener("civic-set-theme", onThemeEvent);
   }, [setTheme, setLanguage, setUser, setToken]);
 
-  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+  return (
+    <I18nextProvider i18n={i18n}>
+      <EnvironmentalBackground />
+      {children}
+      <CivicPulseAssistant />
+    </I18nextProvider>
+  );
 }

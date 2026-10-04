@@ -1,13 +1,14 @@
 {
   "app": {
-    "name": "CleanAir & Clear Streets",
-    "tagline": "Report. Predict. Resolve. Verify."
+    "name": "CivicPulse",
+    "tagline": "Environmental Civic Intelligence — Report. Track. Improve."
   },
   "nav": {
     "report": "Report Issue",
     "map": "Live Map",
-    "dashboard": "Worker Dashboard",
+    "dashboard": "Civic Dashboard",
     "stats": "City Stats",
+    "plans": "Plans",
     "login": "Login",
     "logout": "Logout",
     "notifications": "Notifications"
@@ -15,10 +16,11 @@
   "themes": {
     "label": "Theme",
     "cleanairday": "CleanAir Day",
-    "nightpatrol": "Night Patrol",
-    "alertmode": "Alert Mode",
     "ecogreen": "Eco Green",
-    "highvisibility": "High Visibility"
+    "nightpatrol": "Night Patrol",
+    "highvisibility": "High Visibility",
+    "livingplanet": "Living Planet",
+    "alertmode": "Alert Mode"
   },
   "lang": {
     "en": "EN",

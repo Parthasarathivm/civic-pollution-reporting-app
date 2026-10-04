@@ -1,20 +1,21 @@
 "use client";
 import Link from "next/link";
-import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/appStore";
 import { useEffect, useState } from "react";
+import { PlanModal } from "@/components/PlanModal";
 
-interface Stats {
+interface StatsData {
   totalReports: number;
   resolvedPercent: number;
+  activeIssues: number;
   recurringHotspots: number;
+  totalConfirmations: number;
 }
 
 export default function HomePage() {
-  const { t } = useTranslation();
   const { user } = useAppStore();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [seeding, setSeeding] = useState(false);
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [showPlans, setShowPlans] = useState(false);
 
   useEffect(() => {
     fetch("/api/stats")
@@ -25,233 +26,226 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
-  async function handleSeed() {
-    setSeeding(true);
-    await fetch("/api/seed", { method: "POST" });
-    window.location.reload();
-  }
+  const lifecycleStages = [
+    { step: 1, title: "Citizen Report", icon: "📸", desc: "Citizen captures photo, GPS location, and pollution severity." },
+    { step: 2, title: "Case Triage", icon: "🔍", desc: "Moderators triage reports, filter duplicates, and validate evidence." },
+    { step: 3, title: "Priority & Assignment", icon: "⚡", desc: "Assigned to specialized municipal departments and response squads." },
+    { step: 4, title: "Investigation & Cleanup", icon: "🚛", desc: "Field authorities mobilize on-site remediation and hazardous waste removal." },
+    { step: 5, title: "Resolution & Audit", icon: "✅", desc: "Remediation verified with public note and site audit photos." },
+    { step: 6, title: "Community Confirmation", icon: "👥", desc: "Local citizens confirm remediation and track environmental health." },
+  ];
 
-  const features = [
+  const pillarCards = [
     {
       icon: "📸",
-      titleKey: "Citizen Reporting",
-      desc: "Photo + GPS + AI classification in seconds",
+      title: "Citizen-Powered Reporting",
+      desc: "Instant hazard logging with photo evidence, GPS auto-detection, and structured severity classification.",
     },
     {
       icon: "🗺️",
-      titleKey: "Live Map",
-      desc: "Color-coded pins, clustered hotspots, real-time data",
+      title: "Interactive Live Map",
+      desc: "Real-time geographic visualization of pollution incidents, active hotspots, and remediation status.",
     },
     {
       icon: "🔁",
-      titleKey: "Hotspot Detection",
-      desc: "DBSCAN clustering flags recurring problem areas",
+      title: "Hotspot Cluster Detection",
+      desc: "Backend spatial clustering detects recurring pollution hazards to direct systemic municipal resources.",
     },
     {
-      icon: "🚛",
-      titleKey: "Worker Routes",
-      desc: "Optimized cleanup routes generated automatically",
+      icon: "👥",
+      title: "Community Confirmation",
+      desc: "Authenticated citizens corroborate observed local issues to prevent false alarms and aid prioritization.",
     },
     {
-      icon: "✅",
-      titleKey: "AI Verification",
-      desc: "Before/after photo comparison confirms resolution",
+      icon: "🏛️",
+      title: "Verified Civic Helplines",
+      desc: "Direct directory of statutory pollution control boards, emergency dispatch, and municipal control rooms.",
     },
     {
-      icon: "📊",
-      titleKey: "Transparency",
-      desc: "Public stats build civic trust",
+      icon: "📈",
+      title: "Open Civic Transparency",
+      desc: "Live PostgreSQL insights into resolution rates, response timelines, and neighborhood environmental health.",
     },
   ];
 
   return (
-    <div className="theme-bg-primary min-h-screen">
-      {/* Hero */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, var(--nav-bg) 0%, var(--accent) 100%)",
-          color: "var(--nav-text)",
-        }}
-      >
-        <div className="page-container py-20 text-center relative z-10">
-          <div className="text-6xl mb-4">🌬️</div>
-          <h1 className="text-4xl md:text-6xl font-black mb-4 leading-tight">
-            {t("app.name")}
-          </h1>
-          <p className="text-lg md:text-2xl mb-2 opacity-90">
-            {t("app.tagline")}
-          </p>
-          <p className="text-sm md:text-base opacity-70 max-w-2xl mx-auto mb-10">
-            AI-powered civic platform · Three languages · Five themes · Real-time hotspot prediction
-          </p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/report" className="theme-btn text-lg px-8 py-3">
-              📷 {t("nav.report")}
-            </Link>
-            <Link
-              href="/map"
-              className="theme-btn-secondary text-lg px-8 py-3"
-              style={{ borderColor: "white", color: "white" }}
-            >
-              🗺️ {t("nav.map")}
-            </Link>
+    <div className="min-h-screen py-10">
+      <div className="page-container space-y-12">
+        {/* Hero Section */}
+        <div className="theme-card text-center py-16 px-4 md:px-8 border shadow-xl relative overflow-hidden" style={{ borderColor: "var(--border)" }}>
+          <div className="max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600">
+              <span>🌱</span>
+              <span>CivicPulse Platform</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight" style={{ color: "var(--text-primary)" }}>
+              Report. Track. Improve.
+            </h1>
+
+            <p className="text-sm sm:text-lg theme-text-muted leading-relaxed max-w-2xl mx-auto">
+              A citizen-powered environmental pollution reporting and response platform. Connect directly with municipal departments to identify hazards, verify cleanups, and protect our shared civic spaces.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+              <Link
+                href="/report"
+                className="theme-btn py-3 px-6 text-sm font-bold flex items-center gap-2 shadow-lg"
+              >
+                <span>📸</span>
+                <span>Report an Issue</span>
+              </Link>
+              <Link
+                href="/dashboard"
+                className="theme-btn-secondary py-3 px-6 text-sm font-bold flex items-center gap-2"
+              >
+                <span>📊</span>
+                <span>Open Dashboard</span>
+              </Link>
+              <Link
+                href="/map"
+                className="theme-btn-secondary py-3 px-5 text-sm font-bold flex items-center gap-2"
+              >
+                <span>🗺️</span>
+                <span>Explore Map</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Real-time KPI summary bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-12 pt-8 border-t max-w-4xl mx-auto" style={{ borderColor: "var(--border)" }}>
+            <div className="p-2">
+              <p className="text-2xl sm:text-3xl font-extrabold" style={{ color: "var(--accent)" }}>
+                {stats ? stats.totalReports : "–"}
+              </p>
+              <p className="text-xs theme-text-muted">Total Recorded Reports</p>
+            </div>
+            <div className="p-2">
+              <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600">
+                {stats ? `${stats.resolvedPercent}%` : "–"}
+              </p>
+              <p className="text-xs theme-text-muted">Remediation Rate</p>
+            </div>
+            <div className="p-2">
+              <p className="text-2xl sm:text-3xl font-extrabold text-amber-600">
+                {stats ? stats.activeIssues : "–"}
+              </p>
+              <p className="text-xs theme-text-muted">Active In Triage</p>
+            </div>
+            <div className="p-2">
+              <p className="text-2xl sm:text-3xl font-extrabold text-sky-600">
+                {stats ? stats.totalConfirmations : "–"}
+              </p>
+              <p className="text-xs theme-text-muted">Community Corroborations</p>
+            </div>
           </div>
         </div>
-        {/* Decorative circles */}
-        <div
-          className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-10"
-          style={{ backgroundColor: "white" }}
-        />
-        <div
-          className="absolute -bottom-10 -left-10 w-60 h-60 rounded-full opacity-10"
-          style={{ backgroundColor: "white" }}
-        />
-      </div>
 
-      {/* Stats bar */}
-      {stats && (
+        {/* Product Lifecycle Case Flow */}
+        <div className="theme-card py-10 px-6">
+          <div className="text-center max-w-xl mx-auto mb-8">
+            <span className="text-xs font-bold uppercase tracking-wider text-sky-600">
+              End-To-End Case Lifecycle
+            </span>
+            <h2 className="text-2xl font-bold mt-1" style={{ color: "var(--text-primary)" }}>
+              How CivicPulse Works
+            </h2>
+            <p className="text-xs theme-text-muted mt-1">
+              From observation to remediation verification: a transparent municipal case management pipeline.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {lifecycleStages.map((stage) => (
+              <div
+                key={stage.step}
+                className="p-4 rounded-xl border flex items-start gap-3 bg-black/[0.02] dark:bg-white/[0.02]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                  style={{ backgroundColor: "var(--accent-light)" }}
+                >
+                  {stage.icon}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 text-sky-600">
+                      STEP {stage.step}
+                    </span>
+                    <h3 className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+                      {stage.title}
+                    </h3>
+                  </div>
+                  <p className="text-xs theme-text-muted leading-relaxed">
+                    {stage.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Platform Pillars */}
+        <div className="space-y-4">
+          <div className="text-center max-w-xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+              Core Capabilities
+            </span>
+            <h2 className="text-2xl font-bold mt-1" style={{ color: "var(--text-primary)" }}>
+              Built for Citizens & Municipal Teams
+            </h2>
+            <p className="text-xs theme-text-muted mt-1">
+              Engineered with PostgreSQL spatial clustering, server-side authorization, and zero fake data.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pillarCards.map((p, i) => (
+              <div key={i} className="theme-card space-y-2">
+                <span className="text-3xl block">{p.icon}</span>
+                <h3 className="font-bold text-base" style={{ color: "var(--text-primary)" }}>
+                  {p.title}
+                </h3>
+                <p className="text-xs theme-text-muted leading-relaxed">
+                  {p.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Call to Action Footer Card */}
         <div
-          className="border-y"
+          className="theme-card p-8 text-center rounded-2xl border"
           style={{
-            borderColor: "var(--border)",
             backgroundColor: "var(--bg-secondary)",
+            borderColor: "var(--border)",
           }}
         >
-          <div className="page-container py-6">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p
-                  className="text-3xl font-black"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {stats.totalReports.toLocaleString()}
-                </p>
-                <p className="text-sm theme-text-muted">
-                  {t("stats.totalReports")}
-                </p>
-              </div>
-              <div>
-                <p
-                  className="text-3xl font-black"
-                  style={{ color: "var(--success)" }}
-                >
-                  {stats.resolvedPercent}%
-                </p>
-                <p className="text-sm theme-text-muted">
-                  {t("stats.resolvedPercent")}
-                </p>
-              </div>
-              <div>
-                <p
-                  className="text-3xl font-black"
-                  style={{ color: "var(--danger)" }}
-                >
-                  {stats.recurringHotspots}
-                </p>
-                <p className="text-sm theme-text-muted">
-                  {t("stats.recurringHotspots")}
-                </p>
-              </div>
+          <div className="max-w-xl mx-auto space-y-3">
+            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+              Ready to Improve Your Local Environment?
+            </h2>
+            <p className="text-xs theme-text-muted leading-relaxed">
+              Join community members, ward stewards, and local authorities working together for cleaner, healthier neighborhoods.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Link href="/report" className="theme-btn text-xs py-2.5 px-5 font-bold">
+                Report a Hazard Now
+              </Link>
+              <button
+                onClick={() => setShowPlans(true)}
+                className="theme-btn-secondary text-xs py-2.5 px-5 font-bold"
+              >
+                View Civic Tiers
+              </button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Features grid */}
-      <div className="page-container py-16">
-        <h2
-          className="text-3xl font-bold text-center mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          How It Works
-        </h2>
-        <p
-          className="text-center theme-text-muted mb-12"
-          style={{ color: "var(--text-muted)" }}
-        >
-          A complete civic loop — from first photo to verified resolution
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((f, i) => (
-            <div key={i} className="theme-card text-center hover:scale-105 transition-transform">
-              <div className="text-4xl mb-3">{f.icon}</div>
-              <h3
-                className="font-bold text-lg mb-1"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {f.titleKey}
-              </h3>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {f.desc}
-              </p>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* Demo CTA */}
-      <div
-        className="border-t py-12 text-center"
-        style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)" }}
-      >
-        <h3
-          className="text-2xl font-bold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Try the Demo
-        </h3>
-        <p className="theme-text-muted mb-6 text-sm">
-          Load sample data to explore all features
-        </p>
-        <div className="flex flex-wrap gap-4 justify-center">
-          <button
-            onClick={handleSeed}
-            disabled={seeding}
-            className="theme-btn"
-          >
-            {seeding ? "🔄 Loading..." : "🌱 Load Demo Data"}
-          </button>
-          <Link href="/login" className="theme-btn-secondary">
-            🔐 Login (worker@cleanair.demo / demo123)
-          </Link>
-        </div>
-        <p className="mt-4 text-xs theme-text-muted">
-          Demo accounts: admin@cleanair.demo · worker@cleanair.demo · citizen@cleanair.demo (all: demo123)
-        </p>
-      </div>
-
-      {/* Theme showcase */}
-      <div className="page-container py-12">
-        <h3
-          className="text-xl font-bold text-center mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          5 Visual Themes · 3 Languages
-        </h3>
-        <p className="text-center text-sm theme-text-muted mb-6">
-          Use the 🎨 palette icon in the top navbar to switch themes and EN / हिं / த for language
-        </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          {[
-            { name: "CleanAir Day", color: "#0ea5e9", emoji: "☀️" },
-            { name: "Night Patrol", color: "#00ff41", emoji: "🌙" },
-            { name: "Alert Mode", color: "#ff4444", emoji: "🚨" },
-            { name: "Eco Green", color: "#558b2f", emoji: "🌿" },
-            { name: "High Visibility", color: "#000000", emoji: "⚡" },
-          ].map((theme) => (
-            <div
-              key={theme.name}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium"
-              style={{ backgroundColor: theme.color }}
-            >
-              <span>{theme.emoji}</span>
-              <span>{theme.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <PlanModal isOpen={showPlans} onClose={() => setShowPlans(false)} />
     </div>
   );
 }

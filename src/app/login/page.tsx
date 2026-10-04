@@ -1,11 +1,10 @@
 "use client";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/appStore";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
-  const { t } = useTranslation();
   const router = useRouter();
   const { setUser, setToken } = useAppStore();
 
@@ -14,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"citizen" | "worker">("citizen");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,12 +28,13 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || "Login failed");
       setToken(data.token);
       setUser(data.user);
-      router.push(data.user.role !== "citizen" ? "/dashboard" : "/map");
+      // All authenticated users enter the same core CivicPulse application shell
+      router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("auth.invalidCredentials"));
+      setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setLoading(false);
     }
@@ -49,222 +48,254 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, phone, role }),
+        body: JSON.stringify({ name, email, password, phone }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setSuccess(t("auth.registerSuccess"));
+      if (!res.ok) throw new Error(data.error || "Registration failed");
+      setSuccess("Account registered successfully! You can now log in.");
       setMode("login");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("common.error"));
+      setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
   }
 
+  function fillDemoAccount(demoEmail: string) {
+    setEmail(demoEmail);
+    setPassword("demo123");
+    setError("");
+  }
+
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ backgroundColor: "var(--bg-primary)" }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 bg-transparent">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🌬️</div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {mode === "login" ? t("auth.loginTitle") : t("auth.registerTitle")}
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-block text-4xl mb-2">
+            🌱
+          </Link>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            CivicPulse {mode === "login" ? "Portal Access" : "Citizen Registration"}
           </h1>
+          <p className="text-xs theme-text-muted mt-1">
+            Citizen-Powered Environmental Reporting Platform
+          </p>
         </div>
 
-        <div className="theme-card">
+        <div className="theme-card shadow-xl border" style={{ borderColor: "var(--border)" }}>
           {error && (
             <div
-              className="mb-4 p-3 rounded-lg text-sm"
+              className="mb-4 p-3 rounded-lg text-xs font-semibold flex items-center gap-1.5"
               style={{ backgroundColor: "#fee2e2", color: "#dc2626" }}
             >
-              ⚠️ {error}
+              <span>⚠️</span>
+              <span>{error}</span>
             </div>
           )}
+
           {success && (
             <div
-              className="mb-4 p-3 rounded-lg text-sm"
+              className="mb-4 p-3 rounded-lg text-xs font-semibold flex items-center gap-1.5"
               style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}
             >
-              ✅ {success}
+              <span>✅</span>
+              <span>{success}</span>
             </div>
           )}
 
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.email")}
+                <label className="block text-xs font-semibold theme-text-muted mb-1">
+                  Email Address
                 </label>
                 <input
                   type="email"
+                  required
+                  placeholder="name@domain.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="theme-input"
-                  placeholder="you@example.com"
-                  required
+                  className="theme-input text-xs w-full"
                 />
               </div>
+
               <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.password")}
+                <label className="block text-xs font-semibold theme-text-muted mb-1">
+                  Password
                 </label>
                 <input
                   type="password"
+                  required
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="theme-input"
-                  required
+                  className="theme-input text-xs w-full"
                 />
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="theme-btn w-full justify-center py-3"
+                className="theme-btn w-full text-xs py-2.5 font-bold flex items-center justify-center gap-2"
               >
-                {loading ? t("auth.loggingIn") : t("auth.loginBtn")}
+                {loading ? (
+                  <>
+                    <span className="spinner" />
+                    <span>Signing In...</span>
+                  </>
+                ) : (
+                  <span>Sign In to CivicPulse</span>
+                )}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-3.5">
               <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.name")}
+                <label className="block text-xs font-semibold theme-text-muted mb-1">
+                  Full Name *
                 </label>
                 <input
                   type="text"
+                  required
+                  placeholder="Your Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="theme-input"
-                  required
+                  className="theme-input text-xs w-full"
                 />
               </div>
+
               <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.email")}
+                <label className="block text-xs font-semibold theme-text-muted mb-1">
+                  Email Address *
                 </label>
                 <input
                   type="email"
+                  required
+                  placeholder="name@domain.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="theme-input"
-                  required
+                  className="theme-input text-xs w-full"
                 />
               </div>
+
               <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.phone")}
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="theme-input"
-                />
-              </div>
-              <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.password")}
+                <label className="block text-xs font-semibold theme-text-muted mb-1">
+                  Password (min 6 characters) *
                 </label>
                 <input
                   type="password"
+                  required
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="theme-input"
-                  required
+                  className="theme-input text-xs w-full"
                 />
               </div>
+
               <div>
-                <label
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {t("auth.roleLabel")}
+                <label className="block text-xs font-semibold theme-text-muted mb-1">
+                  Phone (Optional)
                 </label>
-                <select
-                  value={role}
-                  onChange={(e) =>
-                    setRole(e.target.value as "citizen" | "worker")
-                  }
-                  className="theme-input"
-                >
-                  <option value="citizen">{t("auth.roleCitizen")}</option>
-                  <option value="worker">{t("auth.roleWorker")}</option>
-                </select>
+                <input
+                  type="tel"
+                  placeholder="+91..."
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="theme-input text-xs w-full"
+                />
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="theme-btn w-full justify-center py-3"
+                className="theme-btn w-full text-xs py-2.5 font-bold flex items-center justify-center gap-2"
               >
-                {loading ? t("auth.registering") : t("auth.registerBtn")}
+                {loading ? (
+                  <>
+                    <span className="spinner" />
+                    <span>Registering...</span>
+                  </>
+                ) : (
+                  <span>Create Citizen Account</span>
+                )}
               </button>
             </form>
           )}
 
-          <div className="mt-4 text-center text-sm">
-            <span style={{ color: "var(--text-muted)" }}>
-              {mode === "login"
-                ? t("auth.noAccount")
-                : t("auth.haveAccount")}
-            </span>{" "}
-            <button
-              onClick={() => {
-                setMode(mode === "login" ? "register" : "login");
-                setError("");
-                setSuccess("");
-              }}
-              className="font-medium hover:underline"
-              style={{ color: "var(--accent)" }}
-            >
-              {mode === "login"
-                ? t("auth.switchToRegister")
-                : t("auth.switchToLogin")}
-            </button>
+          {/* Toggle Login/Register */}
+          <div className="mt-4 pt-3 border-t text-center text-xs theme-text-muted" style={{ borderColor: "var(--border)" }}>
+            {mode === "login" ? (
+              <p>
+                New community observer?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register");
+                    setError("");
+                  }}
+                  className="text-sky-600 font-bold hover:underline"
+                >
+                  Register here
+                </button>
+              </p>
+            ) : (
+              <p>
+                Already registered?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login");
+                    setError("");
+                  }}
+                  className="text-sky-600 font-bold hover:underline"
+                >
+                  Sign in
+                </button>
+              </p>
+            )}
           </div>
-        </div>
 
-        {/* Demo credentials */}
-        <div className="mt-4 theme-card text-sm">
-          <p
-            className="font-bold mb-2"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            🔑 Demo Credentials
-          </p>
-          <div className="space-y-1" style={{ color: "var(--text-muted)" }}>
-            <p>
-              <strong>Admin:</strong> admin@cleanair.demo / demo123
-            </p>
-            <p>
-              <strong>Worker:</strong> worker@cleanair.demo / demo123
-            </p>
-            <p>
-              <strong>Citizen:</strong> citizen@cleanair.demo / demo123
+          {/* Demo Sandbox Credentials */}
+          <div className="mt-5 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+            <span className="text-[10px] font-bold uppercase tracking-wider theme-text-muted block mb-2">
+              🧪 Demonstration Sandbox Logins:
+            </span>
+            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => fillDemoAccount("citizen@cleanair.demo")}
+                className="py-1 px-2 rounded border text-left hover:bg-black/5 truncate"
+                style={{ borderColor: "var(--border)" }}
+              >
+                🌱 <strong>Citizen</strong>
+              </button>
+              <button
+                type="button"
+                onClick={() => fillDemoAccount("moderator@cleanair.demo")}
+                className="py-1 px-2 rounded border text-left hover:bg-black/5 truncate"
+                style={{ borderColor: "var(--border)" }}
+              >
+                🛡️ <strong>Moderator</strong>
+              </button>
+              <button
+                type="button"
+                onClick={() => fillDemoAccount("authority@cleanair.demo")}
+                className="py-1 px-2 rounded border text-left hover:bg-black/5 truncate"
+                style={{ borderColor: "var(--border)" }}
+              >
+                ⚡ <strong>Authority</strong>
+              </button>
+              <button
+                type="button"
+                onClick={() => fillDemoAccount("admin@cleanair.demo")}
+                className="py-1 px-2 rounded border text-left hover:bg-black/5 truncate"
+                style={{ borderColor: "var(--border)" }}
+              >
+                ⚙️ <strong>Admin</strong>
+              </button>
+            </div>
+            <p className="text-[10px] theme-text-muted mt-1.5 text-center">
+              Password for all demo accounts: <code>demo123</code>
             </p>
           </div>
         </div>

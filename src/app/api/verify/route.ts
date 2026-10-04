@@ -18,13 +18,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // If no API key, return mock result
+    // If no API key, do NOT falsely claim image is AI-verified
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json({
-        result: "resolved",
-        confidence: 0.8,
+        automatedAssessment: false,
+        result: "pending_manual_review",
+        confidence: null,
         reasoning:
-          "Demo mode: assuming the issue has been resolved (no API key configured)",
+          "Automated visual comparison requires ANTHROPIC_API_KEY. Report queued for manual authority verification.",
       });
     }
 
@@ -37,10 +38,10 @@ export async function POST(req: NextRequest) {
       if (url.startsWith("/uploads/")) {
         const filePath = path.join(process.cwd(), "public", url);
         const buffer = await readFile(filePath);
-        let mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" =
-          "image/jpeg";
+        let mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" = "image/jpeg";
         if (url.endsWith(".png")) mediaType = "image/png";
         else if (url.endsWith(".webp")) mediaType = "image/webp";
+        else if (url.endsWith(".gif")) mediaType = "image/gif";
         return { data: buffer.toString("base64"), mediaType };
       }
       throw new Error("Invalid image URL");
@@ -53,14 +54,14 @@ export async function POST(req: NextRequest) {
 
     const message = await client.messages.create({
       model: "claude-opus-4-5",
-      max_tokens: 300,
+      max_tokens: 350,
       messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "I am showing you two images from a pollution reporting app. The FIRST image is the 'before' photo showing a pollution/environmental issue. The SECOND image is the 'after' photo taken by a municipal worker claiming to have resolved the issue.",
+              text: "Compare this BEFORE photo (first image) and AFTER remediation photo (second image) of a municipal pollution report for CivicPulse. Has the hazard/pollution been effectively remediated? Respond in JSON only: {\"result\": \"resolved\" | \"not_resolved\" | \"uncertain\", \"confidence\": 0.0 to 1.0, \"reasoning\": \"brief explanation\"}",
             },
             {
               type: "image",
@@ -78,47 +79,38 @@ export async function POST(req: NextRequest) {
                 data: afterImg.data,
               },
             },
-            {
-              type: "text",
-              text: `Compare these two images and determine if the pollution issue shown in the first image has been resolved in the second image.
-
-Respond ONLY with valid JSON:
-{
-  "result": "<resolved|not_resolved|uncertain>",
-  "confidence": <0.0-1.0>,
-  "reasoning": "<1-2 sentence explanation>"
-}
-
-- "resolved": The area looks cleaner, issue appears to be fixed
-- "not_resolved": The same issue is still visible in the after photo  
-- "uncertain": Images are too different to compare, or unclear`,
-            },
           ],
         },
       ],
     });
 
     const content = message.content[0];
-    if (content.type !== "text") throw new Error("Unexpected response");
+    if (content.type !== "text") {
+      throw new Error("Unexpected response from vision model");
+    }
 
     const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Could not parse response");
+    if (!jsonMatch) {
+      return NextResponse.json({
+        automatedAssessment: false,
+        result: "uncertain",
+        confidence: null,
+        reasoning: "Could not parse structured audit response.",
+      });
+    }
 
-    const result = JSON.parse(jsonMatch[0]);
-
+    const parsed = JSON.parse(jsonMatch[0]);
     return NextResponse.json({
-      result: ["resolved", "not_resolved", "uncertain"].includes(result.result)
-        ? result.result
-        : "uncertain",
-      confidence: Math.min(1, Math.max(0, result.confidence || 0.7)),
-      reasoning: result.reasoning || "Analysis complete",
+      automatedAssessment: true,
+      result: parsed.result,
+      confidence: parsed.confidence,
+      reasoning: parsed.reasoning,
     });
   } catch (error) {
     console.error("Verification error:", error);
-    return NextResponse.json({
-      result: "uncertain",
-      confidence: 0.5,
-      reasoning: "Unable to complete AI analysis. Please verify manually.",
-    });
+    return NextResponse.json(
+      { error: "Image verification encountered an error" },
+      { status: 500 }
+    );
   }
 }
